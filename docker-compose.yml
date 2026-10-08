@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # Сервер базы данных
+  db:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data # Внешний том для сохранения данных
+    networks:
+      - backend-net # База находится только в изолированной внутренней сети
+
+  # Веб-приложение
+  web:
+    build: ./web
+    container_name: express_web_app
+    restart: always
+    ports:
+      - "9090:3000" # Проброс портов: на хосте доступен порт 9090
+    environment:
+      - DB_HOST=db # Имя сервиса БД в качестве хоста
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    depends_on:
+      - db
+    networks:
+      - frontend-net
+      - backend-net # Веб-приложение связывает две сети
+
+volumes:
+  pgdata: # Объявление внешнего именованного тома
+
+networks:
+  frontend-net:
+    driver: bridge # Сеть для связи внешнего мира с веб-приложением
+  backend-net:
+    driver: bridge # Изолированная сеть для связи приложения и БД
